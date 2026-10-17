@@ -1,0 +1,10 @@
+# 构建产物
+build/
+*.spec
+__pycache__/
+*.pyc
+
+# 测试与临时文件
+*_out*.mp4
+t_*.mp4
+*.log
