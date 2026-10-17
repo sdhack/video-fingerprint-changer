@@ -30,18 +30,19 @@ except ImportError:
 class App(BaseTk):
     def __init__(self):
         super().__init__()
+        self.withdraw()  # 先隐藏窗口,居中定位完成后再显示,避免启动时位置跳动
         self.title('视频指纹修改器 · 批量去重工具')
-        self.geometry('780x560')
         self.minsize(680, 480)
-        self.update_idletasks()
-        w, h = 780, 560
-        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
-        self.geometry(f'{w}x{h}+{(sw - w) // 2}+{max(0, (sh - h) // 2 - 20)}')
         self.files = []          # 待处理视频
         self.work_dir = None
         self.cancel = False
         self._log_path = None
         self._build_ui()
+        self.update_idletasks()
+        w, h = 780, 560
+        sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
+        self.geometry(f'{w}x{h}+{(sw - w) // 2}+{max(0, (sh - h) // 2 - 20)}')
+        self.deiconify()
         if HAS_DND:
             self.drop_target_register(DND_FILES)
             self.dnd_bind('<<Drop>>', self._on_drop)
