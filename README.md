@@ -8,10 +8,10 @@
 
 [![Windows](https://img.shields.io/badge/Windows-10%2F11-0078D6?logo=windows11&logoColor=white)](https://github.com/sdhack/video-fingerprint-changer/releases)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/下载-单文件exe-green)](../../releases)
+[![Release](https://img.shields.io/badge/Release-v1.1-blue)](../../releases)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-单文件 exe · 免安装 · 免费使用
+免安装 · 免费开源 · Windows 10/11
 
 </div>
 
@@ -37,6 +37,8 @@
 2. 双击文件夹内的 `视频指纹修改器.exe`(免安装,秒开)
 3. 把视频文件或文件夹**拖进窗口**
 4. 设置输出目录与份数,点击 **开始处理 ▶**,完成后一键打开输出目录
+
+> 📝 版本变更记录见 [CHANGELOG.md](CHANGELOG.md)
 
 ```
 产品视频A.mp4  ──►  产品视频A_F40D51.mp4   (大小相同,MD5 全新)
@@ -76,10 +78,19 @@ MP4/MOV 文件由一系列 box(原子)组成,其中 `free`/`skip` 是预留的�
 ## ⌨️ 命令行调用(可选)
 
 ```python
-from fingerprint import make_fingerprint
+from fingerprint import make_fingerprint, fingerprint_inplace, file_hash
 
-# 大小不变,指纹全新,返回输出文件的 6 位 CRC
-crc6 = make_fingerprint("源视频.mp4", "输出.mp4")
+# 生成指纹全新的副本:大小不变,返回输出文件的 6 位 CRC
+crc6 = make_fingerprint("源视频.mp4", "输出.mp4")            # -> "F40D51"
+
+# 无空白区时允许尾部附加(文件最多增大 128 字节)
+make_fingerprint("源视频.mp4", "输出.mp4", allow_append=True)
+
+# 原地修改(不生成副本,大小不变)
+fingerprint_inplace("视频.mp4")
+
+# 校验
+print(file_hash("输出.mp4"))                                  # md5
 ```
 
 ## 🛠️ 从源码运行 / 打包
@@ -111,7 +122,7 @@ pyinstaller --noconfirm --onedir --windowed \
 MP4 / MOV / M4V 等 box 结构容器均可;其他格式请先转换。
 
 **Q: 杀毒软件报毒?**
-PyInstaller 打包的单文件 exe 偶尔被误报,添加信任即可。
+PyInstaller 打包的程序偶尔被误报,将整个程序文件夹添加到杀软信任区即可。
 
 **Q: 跨电脑能用吗?**
 能。exe 已内置全部运行环境,拷贝到任意 Windows 10/11 64 位电脑直接运行。
@@ -121,8 +132,11 @@ PyInstaller 打包的单文件 exe 偶尔被误报,添加信任即可。
 ```
 ├── 视频指纹修改器.pyw    # GUI 主程序
 ├── fingerprint.py        # 指纹修改核心模块(可独立调用)
-├── dist/视频指纹修改器/   # 打包好的程序目录(秒开)
+├── build.bat             # 一键打包脚本
+├── CHANGELOG.md          # 版本更新日志
 └── README.md
+
+程序成品(免解压 zip)请到 Releases 页面下载,不进入版本库。
 ```
 
 ## ⚠️ 免责声明
