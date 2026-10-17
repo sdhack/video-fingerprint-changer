@@ -1,5 +1,6 @@
-# 构建产物
+# 构建产物(程序通过 GitHub Releases 分发)
 build/
+dist/
 *.spec
 __pycache__/
 *.pyc

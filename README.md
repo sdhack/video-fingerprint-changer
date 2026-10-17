@@ -24,6 +24,7 @@
 | 🔒 **大小不变** | 随机数据等长写入视频空闲区,文件一个字节都不变大 |
 | 🖼️ **画质零损失** | 不重新编码,音视频数据(mdat)完全不动 |
 | ⚡ **极速处理** | 单遍流式拷贝 + 边拷边注入,实测可达 **200+ MB/s** |
+| 🚀 **秒开启动** | 目录式免解压打包,冷启动 <1s、热启动 ~0.4s,逼近原生体验 |
 | 🖱️ **拖入即用** | 视频/整个文件夹直接拖进窗口,自动递归扫描 |
 | 📦 **批量多副本** | 一个视频一键生成 N 份不同指纹的副本,多线程并发 |
 | 🏷️ **CRC 命名** | 输出文件自动带上自身 6 位 CRC 校验码,天然不重名 |
@@ -32,10 +33,10 @@
 
 ## 🚀 快速开始
 
-1. 从 [Releases](../../releases) 下载 `视频指纹修改器.exe`(单文件,免安装)
-2. 把视频文件或文件夹**拖进窗口**
-3. 设置输出目录与份数,点击 **开始处理 ▶**
-4. 完成后一键打开输出目录
+1. 从 [Releases](../../releases) 下载 `视频指纹修改器_v1.1.zip`,解压到任意位置
+2. 双击文件夹内的 `视频指纹修改器.exe`(免安装,秒开)
+3. 把视频文件或文件夹**拖进窗口**
+4. 设置输出目录与份数,点击 **开始处理 ▶**,完成后一键打开输出目录
 
 ```
 产品视频A.mp4  ──►  产品视频A_F40D51.mp4   (大小相同,MD5 全新)
@@ -88,10 +89,15 @@ pip install tkinterdnd2
 python 视频指纹修改器.pyw            # 直接运行
 
 pip install pyinstaller
-pyinstaller --noconfirm --onefile --windowed \
+pyinstaller --noconfirm --onedir --windowed \
     --name "视频指纹修改器" --collect-all tkinterdnd2 \
-    "视频指纹修改器.pyw"             # 打包单文件 exe
+    --exclude-module unittest --exclude-module pydoc --exclude-module doctest \
+    --exclude-module test --exclude-module xmlrpc --exclude-module pygments \
+    "视频指纹修改器.pyw"             # 打包(onedir 免解压,启动快)
 ```
+
+> 💡 为什么不用单文件 exe?onefile 每次启动都要把运行时解压到临时目录(2~4 秒),
+> onedir 目录式打包免解压,冷启动 <1 秒,更接近原生应用。
 
 ## ❓ 常见问题
 
@@ -115,7 +121,7 @@ PyInstaller 打包的单文件 exe 偶尔被误报,添加信任即可。
 ```
 ├── 视频指纹修改器.pyw    # GUI 主程序
 ├── fingerprint.py        # 指纹修改核心模块(可独立调用)
-├── dist/视频指纹修改器.exe # 打包好的单文件可执行程序
+├── dist/视频指纹修改器/   # 打包好的程序目录(秒开)
 └── README.md
 ```
 
