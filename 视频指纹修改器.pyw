@@ -28,21 +28,36 @@ except ImportError:
 
 
 class App(BaseTk):
-    # ---------------- 配色与样式 ----------------
-    C_BG      = '#eef1f6'   # 窗口背景
-    C_CARD    = '#ffffff'   # 卡片背景
-    C_BORDER  = '#e2e6ee'   # 卡片描边
-    C_ACCENT  = '#2f6bed'   # 品牌蓝
-    C_ACCENT_D= '#1e56d6'   # 悬停深蓝
-    C_TEXT    = '#1f2430'   # 主文字
-    C_MUTED   = '#69707f'   # 次要文字
-    C_DANGER  = '#e5484d'   # 停止按钮
-    C_LOG_BG  = '#151821'   # 日志区背景
-    C_LOG_FG  = '#c8d1e0'   # 日志区文字
-
+    # ---------------- 配色(Instagram 极简风) ----------------
+    C_BG      = '#fafafa'
+    C_CARD    = '#ffffff'
+    C_BORDER  = '#dbdbdb'
+    C_TEXT    = '#262626'
+    C_MUTED   = '#8e8e8e'
+    C_ACCENT  = '#d62976'   # INS 玫红(选中/计数)
+    C_LOG_BG  = '#0f1116'
+    C_LOG_FG  = '#b9c3d4'
+    GRAD      = ('#7b2ff7', '#d62976', '#f77737', '#fcaf45')  # INS 渐变
     FONT      = ('微软雅黑', 9)
     FONT_B    = ('微软雅黑', 10, 'bold')
     FONT_MONO = ('Consolas', 9)
+
+    @staticmethod
+    def _hex2rgb(h):
+        return tuple(int(h[i:i + 2], 16) for i in (1, 3, 5))
+
+    def _draw_gradient(self, canvas):
+        w = canvas.winfo_width() or 1
+        h = canvas.winfo_height() or 1
+        canvas.delete('grad')
+        cs = [self._hex2rgb(c) for c in self.GRAD]
+        for x in range(w):
+            t = x / max(w - 1, 1)
+            seg = min(int(t * (len(cs) - 1)), len(cs) - 2)
+            tt = t * (len(cs) - 1) - seg
+            c = '#%02x%02x%02x' % tuple(int(a + (b - a) * tt) for a, b in zip(cs[seg], cs[seg + 1]))
+            canvas.create_line(x, 0, x + 1, h, fill=c, tags='grad')
+        canvas.tag_lower('grad')
 
     def _setup_style(self):
         style = ttk.Style(self)
@@ -51,63 +66,119 @@ class App(BaseTk):
         except tk.TclError:
             pass
         self.configure(bg=self.C_BG)
+        style.configure('.', background=self.C_BG, font=self.FONT, focuscolor=self.C_ACCENT)
+        style.configure('TEntry', fieldbackground='#ffffff', foreground=self.C_TEXT,
+                        bordercolor=self.C_BORDER, lightcolor=self.C_BORDER,
+                        darkcolor=self.C_BORDER, insertcolor=self.C_ACCENT, padding=6)
+        style.map('TEntry', bordercolor=[('focus', self.C_ACCENT)],
+                  lightcolor=[('focus', self.C_ACCENT)], darkcolor=[('focus', self.C_ACCENT)])
+        style.configure('TSpinbox', fieldbackground='#ffffff', foreground=self.C_TEXT,
+                        bordercolor=self.C_BORDER, lightcolor=self.C_BORDER,
+                        darkcolor=self.C_BORDER, arrowsize=11, padding=3)
+        style.configure('TCheckbutton', background=self.C_BG, foreground=self.C_TEXT)
+        style.map('TCheckbutton', background=[('active', self.C_BG)])
+        style.configure('IG.Horizontal.TProgressbar', background=self.C_ACCENT,
+                        troughcolor='#f0f0f0', bordercolor=self.C_BG,
+                        lightcolor=self.C_ACCENT, darkcolor=self.C_ACCENT, thickness=6)
 
-        style.configure('.', background=self.C_BG, font=self.FONT)
-        style.configure('Card.TFrame', background=self.C_CARD)
-        style.configure('Card.TLabel', background=self.C_CARD, foreground=self.C_TEXT)
-        style.configure('Muted.TLabel', background=self.C_CARD, foreground=self.C_MUTED)
-        style.configure('Card.TLabelframe', background=self.C_CARD,
-                        bordercolor=self.C_BORDER, relief='solid', borderwidth=1)
-        style.configure('Card.TLabelframe.Label', background=self.C_CARD,
-                        foreground=self.C_TEXT, font=self.FONT_B)
-        style.configure('TEntry', fieldbackground='#fbfcfe', bordercolor=self.C_BORDER,
-                        lightcolor=self.C_BORDER, darkcolor=self.C_BORDER, padding=3)
-        style.configure('TSpinbox', fieldbackground='#fbfcfe', bordercolor=self.C_BORDER,
-                        lightcolor=self.C_BORDER, darkcolor=self.C_BORDER, padding=2)
-        style.configure('Card.TCheckbutton', background=self.C_CARD, foreground=self.C_TEXT)
-        style.map('Card.TCheckbutton', background=[('active', self.C_CARD)])
+    # ---------------- 药丸按钮 ----------------
+    class PillButton(tk.Canvas):
+        """圆角药丸按钮(真正的 Canvas 子类,支持 ['state'] 与 configure(state=))。
+        kind: primary=黑底白字 / ghost=白底描边 / danger=红底白字"""
 
-        # 主按钮:品牌蓝 + 悬停加深 + 按下更深
-        style.configure('Accent.TButton', background=self.C_ACCENT, foreground='white',
-                        font=self.FONT_B, borderwidth=0, focusthickness=0, padding=(18, 8))
-        style.map('Accent.TButton',
-                  background=[('disabled', '#a9bdef'), ('pressed', self.C_ACCENT_D),
-                              ('active', self.C_ACCENT_D)],
-                  foreground=[('disabled', '#eef2ff')])
-        # 次要按钮:白底描边 + 悬停浅蓝
-        style.configure('Ghost.TButton', background=self.C_CARD, foreground=self.C_TEXT,
-                        bordercolor=self.C_BORDER, borderwidth=1, focusthickness=0,
-                        padding=(10, 5))
-        style.map('Ghost.TButton',
-                  background=[('disabled', '#f4f5f7'), ('active', '#eef3ff')],
-                  foreground=[('disabled', '#9aa1ad')])
-        # 危险按钮(停止)
-        style.configure('Danger.TButton', background=self.C_DANGER, foreground='white',
-                        font=self.FONT_B, borderwidth=0, focusthickness=0, padding=(14, 8))
-        style.map('Danger.TButton',
-                  background=[('disabled', '#f3b7b9'), ('active', '#c93a3f')])
+        SPECS = {'primary': ('#262626', '#ffffff', '#3d3d3d', None, 'FONT_B'),
+                 'ghost':   ('#ffffff', '#262626', '#f2f2f2', '#dbdbdb', 'FONT'),
+                 'danger':  ('#ed4956', '#ffffff', '#d63139', None, 'FONT')}
 
-        style.configure('Accent.Horizontal.TProgressbar', background=self.C_ACCENT,
-                        troughcolor='#e4e8f0', bordercolor=self.C_BG, lightcolor=self.C_ACCENT,
-                        darkcolor=self.C_ACCENT, thickness=10)
+        def __init__(self, app, parent, text, command, kind='ghost'):
+            self._app = app
+            self._cmd = command
+            self._text = text
+            self._spec = self.SPECS[kind]
+            self._disabled = False
+            import tkinter.font as tkfont
+            self._font = tkfont.Font(font=getattr(app, self._spec[4]))
+            w = self._font.measure(text) + (44 if kind == 'primary' else 26)
+            h = self._font.metrics('linespace') + (18 if kind == 'primary' else 12)
+            super().__init__(parent, width=w, height=h, bg=parent['bg'],
+                             highlightthickness=0, cursor='hand2')
 
-    def _card(self, parent, title):
-        """白色卡片容器,带彩色编号徽章标题。"""
-        card = ttk.Frame(parent, style='Card.TLabelframe', borderwidth=1)
+        # -- 绘制 --
+        def _rrect(self, x1, y1, x2, y2, r, **kw):
+            pts = [x1+r,y1, x2-r,y1, x2,y1, x2,y1+r, x2,y2-r, x2,y2,
+                   x2-r,y2, x1+r,y2, x1,y2, x1,y2-r, x1,y1+r, x1,y1]
+            return self.create_polygon(pts, smooth=True, **kw)
+
+        def _colors(self):
+            bg, fg, hover, outline, _ = self._spec
+            if self._disabled:
+                return '#f1f1f1', '#b8b8b8', '#f1f1f1'
+            return bg, fg, outline or bg
+
+        def paint(self):
+            bg, fg, ol = self._colors()
+            w, h = int(self['width']), int(self['height'])
+            self.delete('all')
+            self._rrect(1, 1, w - 1, h - 1, h // 2, fill=bg, outline=ol)
+            self.create_text(w / 2, h / 2, text=self._text, fill=fg, font=self._font)
+
+        def _hover(self, _e=None):
+            if not self._disabled:
+                bg, fg, hover, outline, _ = self._spec
+                w, h = int(self['width']), int(self['height'])
+                self.delete('all')
+                self._rrect(1, 1, w - 1, h - 1, h // 2, fill=hover, outline=hover)
+                self.create_text(w / 2, h / 2, text=self._text, fill=fg, font=self._font)
+
+        def _leave(self, _e=None):
+            self.paint()
+
+        def _click(self, _e=None):
+            if not self._disabled:
+                self._cmd()
+
+        # -- 状态接口 --
+        def __getitem__(self, key):
+            if key == 'state':
+                return 'disabled' if self._disabled else 'normal'
+            return super().__getitem__(key)
+
+        def configure(self, cnf=None, **kw):
+            if cnf and isinstance(cnf, str):
+                kw[cnf] = None
+                cnf = None
+            if 'state' in kw:
+                self._disabled = kw.pop('state') == 'disabled'
+                self.paint()
+                super().configure(cursor='arrow' if self._disabled else 'hand2')
+            return super().configure(cnf, **kw) if (cnf or kw) else None
+
+    def _pill(self, parent, text, command, kind='ghost'):
+        btn = self.PillButton(self, parent, text, command, kind)
+        btn.bind('<Button-1>', btn._click)
+        btn.bind('<Enter>', btn._hover)
+        btn.bind('<Leave>', btn._leave)
+        btn.paint()
+        return btn
+
+    # ---------------- 卡片 ----------------
+    def _card(self, parent, title, note=''):
+        card = tk.Frame(parent, bg=self.C_CARD,
+                        highlightbackground=self.C_BORDER, highlightthickness=1)
         head = tk.Frame(card, bg=self.C_CARD)
-        head.pack(fill='x', padx=12, pady=(10, 2))
-        badge = tk.Label(head, text=title[0], bg=self.C_ACCENT, fg='white',
-                         font=('微软雅黑', 9, 'bold'), width=2, relief='flat')
-        badge.pack(side='left')
-        tk.Label(head, text=title[2:].strip(), bg=self.C_CARD, fg=self.C_TEXT,
-                 font=self.FONT_B).pack(side='left', padx=8)
+        head.pack(fill='x', padx=18, pady=(16, 8))
+        tk.Label(head, text=title, bg=self.C_CARD, fg=self.C_TEXT,
+                 font=('微软雅黑', 11, 'bold')).pack(side='left')
+        if note:
+            tk.Label(head, text=note, bg=self.C_CARD, fg=self.C_MUTED,
+                     font=self.FONT).pack(side='left', padx=10)
         return card, head
 
     def __init__(self):
         super().__init__()
         self.withdraw()  # 先隐藏窗口,居中定位完成后再显示,避免启动时位置跳动
-        self.title('视频指纹修改器 · 批量去重工具')
-        self.minsize(680, 480)
+        self.title('视频指纹修改器')
+        self.minsize(680, 500)
         self.files = []          # 待处理视频
         self.work_dir = None
         self.cancel = False
@@ -115,7 +186,7 @@ class App(BaseTk):
         self._setup_style()
         self._build_ui()
         self.update_idletasks()
-        w, h = 800, 600
+        w, h = 820, 620
         sw, sh = self.winfo_screenwidth(), self.winfo_screenheight()
         self.geometry(f'{w}x{h}+{(sw - w) // 2}+{max(0, (sh - h) // 2 - 20)}')
         self.deiconify()
@@ -128,102 +199,91 @@ class App(BaseTk):
 
     # ---------------- UI ----------------
     def _build_ui(self):
-        pad = {'padx': 12, 'pady': (6, 0)}
-
-        # 顶部品牌横幅
-        banner = tk.Frame(self, bg=self.C_ACCENT)
+        # INS 渐变横幅
+        banner = tk.Canvas(self, height=96, bg=self.GRAD[0], highlightthickness=0)
         banner.pack(fill='x')
-        inner = tk.Frame(banner, bg=self.C_ACCENT)
-        inner.pack(fill='x', padx=16, pady=12)
-        tk.Label(inner, text='🎬 视频指纹修改器', bg=self.C_ACCENT, fg='white',
-                 font=('微软雅黑', 15, 'bold')).pack(side='left')
-        tk.Label(inner, text='大小不变 · 画质零损失 · 批量生成新指纹',
-                 bg=self.C_ACCENT, fg='#cfe0ff',
-                 font=('微软雅黑', 9)).pack(side='left', padx=14, pady=(4, 0))
-        tk.Label(inner, text='v1.1', bg='#1e56d6', fg='white',
-                 font=('微软雅黑', 8, 'bold'), padx=6, pady=2).pack(side='right', pady=(2, 0))
+        banner.bind('<Configure>', lambda e: self._draw_gradient(banner))
+        banner.create_text(28, 36, text='视频指纹修改器', fill='white',
+                           font=('微软雅黑', 17, 'bold'), anchor='w')
+        banner.create_text(28, 66, text='大小不变 · 画质零损失 · 批量生成新指纹',
+                           fill='#ffe3f1', font=('微软雅黑', 9), anchor='w')
+        banner.create_text(792, 48, text='v1.1', fill='#ffffff',
+                           font=('微软雅黑', 9, 'bold'), anchor='e')
 
-        # 1. 视频列表卡片
-        card1, head1 = self._card(self, '1  添加视频(可直接拖入窗口)')
-        card1.pack(fill='both', expand=True, **pad)
-        self.count_var = tk.StringVar(value='共 0 个文件')
+        wrap = tk.Frame(self, bg=self.C_BG)
+        wrap.pack(fill='both', expand=True, padx=24)
+
+        # 视频列表
+        card1, head1 = self._card(wrap, '视频列表', '将文件或文件夹拖入窗口即可添加')
+        card1.pack(fill='both', expand=True, pady=(16, 14))
+        self.count_var = tk.StringVar(value='0 个文件')
         tk.Label(head1, textvariable=self.count_var, bg=self.C_CARD, fg=self.C_ACCENT,
                  font=('微软雅黑', 9, 'bold')).pack(side='right')
         btns = tk.Frame(card1, bg=self.C_CARD)
-        btns.pack(fill='x', padx=12)
-        ttk.Button(btns, text='➕ 添加视频', style='Accent.TButton',
-                   command=self.add_files).pack(side='left', padx=(0, 8))
-        ttk.Button(btns, text='📁 添加文件夹', style='Ghost.TButton',
-                   command=self.add_folder).pack(side='left', padx=(0, 8))
-        ttk.Button(btns, text='清空列表', style='Ghost.TButton',
-                   command=self.clear_list).pack(side='left')
-        ttk.Button(btns, text='打开输出目录', style='Ghost.TButton',
-                   command=self.open_outdir).pack(side='right')
+        btns.pack(fill='x', padx=18)
+        self._pill(btns, '添加视频', self.add_files, 'primary').pack(side='left')
+        self._pill(btns, '添加文件夹', self.add_folder).pack(side='left', padx=8)
+        self._pill(btns, '清空', self.clear_list).pack(side='left')
+        self._pill(btns, '打开输出目录', self.open_outdir).pack(side='right')
 
-        list_wrap = tk.Frame(card1, bg=self.C_BORDER)
-        list_wrap.pack(fill='both', expand=True, padx=12, pady=(8, 4))
-        self.listbox = tk.Listbox(list_wrap, height=7, selectmode='extended', bd=0,
-                                  bg='#fbfcfe', fg=self.C_TEXT, font=self.FONT,
-                                  selectbackground=self.C_ACCENT, selectforeground='white',
+        self.listbox = tk.Listbox(card1, height=7, selectmode='extended', bd=0,
+                                  bg='#ffffff', fg=self.C_TEXT, font=self.FONT,
+                                  selectbackground='#fbe9f1', selectforeground=self.C_TEXT,
                                   activestyle='none', highlightthickness=0)
-        self.listbox.pack(fill='both', expand=True, padx=1, pady=1)
+        self.listbox.pack(fill='both', expand=True, padx=18, pady=(10, 16))
 
-        # 2. 输出设置卡片
-        card2, _ = self._card(self, '2  输出设置')
-        card2.pack(fill='x', **pad)
-        row = tk.Frame(card2, bg=self.C_CARD)
-        row.pack(fill='x', padx=12, pady=(6, 2))
-        tk.Label(row, text='输出目录', bg=self.C_CARD, fg=self.C_MUTED,
-                 font=self.FONT).pack(side='left')
+        # 输出设置
+        card2, _ = self._card(wrap, '输出设置')
+        card2.pack(fill='x', pady=(0, 14))
+        grid = tk.Frame(card2, bg=self.C_CARD)
+        grid.pack(fill='x', padx=18, pady=(2, 4))
+        grid.columnconfigure(1, weight=1)
+        tk.Label(grid, text='输出目录', bg=self.C_CARD, fg=self.C_MUTED,
+                 font=self.FONT).grid(row=0, column=0, sticky='w', pady=4)
         self.out_var = tk.StringVar(value='')
-        ttk.Entry(row, textvariable=self.out_var, style='TEntry').pack(
-            side='left', fill='x', expand=True, padx=8)
-        ttk.Button(row, text='浏览...', style='Ghost.TButton',
-                   command=self.choose_outdir).pack(side='left')
+        ttk.Entry(grid, textvariable=self.out_var).grid(
+            row=0, column=1, sticky='ew', padx=12, pady=4)
+        self._pill(grid, '浏览', self.choose_outdir).grid(row=0, column=2, pady=4)
 
-        row2 = tk.Frame(card2, bg=self.C_CARD)
-        row2.pack(fill='x', padx=12, pady=2)
-        tk.Label(row2, text='每个视频生成份数', bg=self.C_CARD, fg=self.C_MUTED,
-                 font=self.FONT).pack(side='left')
+        tk.Label(grid, text='生成份数', bg=self.C_CARD, fg=self.C_MUTED,
+                 font=self.FONT).grid(row=1, column=0, sticky='w', pady=4)
+        sub = tk.Frame(grid, bg=self.C_CARD)
+        sub.grid(row=1, column=1, sticky='w', padx=12, pady=4)
         self.copies_var = tk.IntVar(value=1)
-        ttk.Spinbox(row2, from_=1, to=100, width=5, textvariable=self.copies_var,
-                    font=self.FONT).pack(side='left', padx=(6, 4))
-        tk.Label(row2, text='份(大于 1 时每份均为不同指纹的新副本)', bg=self.C_CARD,
-                 fg=self.C_MUTED, font=self.FONT).pack(side='left')
-        tk.Label(row2, text='并发线程', bg=self.C_CARD, fg=self.C_MUTED,
-                 font=self.FONT).pack(side='left', padx=(18, 0))
+        ttk.Spinbox(sub, from_=1, to=100, width=5, textvariable=self.copies_var,
+                    font=self.FONT).pack(side='left')
+        tk.Label(sub, text='每份均为不同指纹的新副本', bg=self.C_CARD, fg=self.C_MUTED,
+                 font=self.FONT).pack(side='left', padx=10)
+        tk.Label(sub, text='并发线程', bg=self.C_CARD, fg=self.C_MUTED,
+                 font=self.FONT).pack(side='left', padx=(24, 6))
         self.thread_var = tk.IntVar(value=max(1, min(8, os.cpu_count() or 4)))
-        ttk.Spinbox(row2, from_=1, to=32, width=4, textvariable=self.thread_var,
-                    font=self.FONT).pack(side='left', padx=6)
+        ttk.Spinbox(sub, from_=1, to=32, width=4, textvariable=self.thread_var,
+                    font=self.FONT).pack(side='left')
 
-        row3 = tk.Frame(card2, bg=self.C_CARD)
-        row3.pack(fill='x', padx=12, pady=(2, 8))
         self.append_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(row3, style='Card.TCheckbutton', variable=self.append_var,
-                        text='兜底:找不到空闲区时在文件尾部附加随机数据(文件会略微增大,保证一定能输出)'
-                        ).pack(side='left')
+        ttk.Checkbutton(grid, variable=self.append_var,
+                        text='兜底:找不到空闲区时在尾部附加随机数据(略微增大文件,保证输出)'
+                        ).grid(row=2, column=0, columnspan=3, sticky='w', pady=(2, 12))
 
-        # 3. 执行区
-        go = tk.Frame(self, bg=self.C_BG)
-        go.pack(fill='x', padx=12, pady=8)
-        self.start_btn = ttk.Button(go, text='▶  开始处理', style='Accent.TButton',
-                                    command=self.start)
+        # 执行区
+        go = tk.Frame(wrap, bg=self.C_BG)
+        go.pack(fill='x', pady=(0, 14))
+        self.start_btn = self._pill(go, '开始处理  ▶', self.start, 'primary')
         self.start_btn.pack(side='left')
-        self.stop_btn = ttk.Button(go, text='停止', style='Danger.TButton',
-                                   command=self.stop, state='disabled')
-        self.stop_btn.pack(side='left', padx=8)
+        self.stop_btn = self._pill(go, '停止', self.stop, 'danger')
+        self.stop_btn.configure(state='disabled')
+        self.stop_btn.pack(side='left', padx=10)
         self.progress = ttk.Progressbar(go, mode='determinate',
-                                        style='Accent.Horizontal.TProgressbar')
-        self.progress.pack(side='left', fill='x', expand=True, padx=(8, 0))
+                                        style='IG.Horizontal.TProgressbar')
+        self.progress.pack(side='left', fill='x', expand=True, padx=(10, 0))
 
-        # 日志区(控制台风格)
-        log_wrap = tk.Frame(self, bg=self.C_LOG_BG)
-        log_wrap.pack(fill='both', expand=True, padx=12, pady=(0, 12))
-        self.log_text = tk.Text(log_wrap, height=7, state='disabled', bd=0,
+        # 日志区(极简暗色)
+        logcard = tk.Frame(wrap, bg=self.C_LOG_BG)
+        logcard.pack(fill='both', expand=True, pady=(0, 20))
+        self.log_text = tk.Text(logcard, height=6, state='disabled', bd=0,
                                 bg=self.C_LOG_BG, fg=self.C_LOG_FG,
-                                insertbackground=self.C_LOG_FG,
-                                font=self.FONT_MONO, highlightthickness=0,
-                                padx=10, pady=8)
+                                insertbackground=self.C_LOG_FG, font=self.FONT_MONO,
+                                highlightthickness=0, padx=16, pady=10)
         self.log_text.pack(fill='both', expand=True)
 
     # ---------------- 列表 / 拖拽 ----------------
